@@ -1,7 +1,7 @@
 # test_config.py
 
 # Session & Environment
-SESSION_ID = '00DO500000XmBxS!AQEAQEu0AxNv1qpnALicQ8gmjRx17ymaxv3r1ZYeTdo31MiVXOakqgzqPU2DQacB2Wl3Vv4PqrTjWa6n3nIEddp5un8wS8TZ'  # Set dynamically or use environment variable
+SESSION_ID = ''  # Set dynamically or use environment variable
 INSTANCE_URL = 'https://trimbledx--dxces.sandbox.my.salesforce.com'
 API_VERSION = 'v58.0'
 
