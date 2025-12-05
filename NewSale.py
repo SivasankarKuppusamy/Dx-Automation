@@ -8,7 +8,7 @@ import string
 from datetime import datetime
 import os
 import csv
-
+from AddProductHelper import *
 def generate_unique_name(prefix):
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     rand_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
@@ -17,11 +17,11 @@ def generate_unique_name(prefix):
     else:
         return f"{prefix}_{ADDRESS["Country"]}_{timestamp}_{rand_str}"
 
-ACCOUNT_NAME = generate_unique_name("Account")
+ACCOUNT_NAME = generate_unique_name(ACCOUNT_NAME_CONFIG)
 LastName = generate_unique_name("Contact")
 
-print(ACCOUNT_NAME)  # e.g., Account_20250812114835_X9K2
-print(LastName)  # e.g., Contact_20250812114835_J8ZQ
+print(ACCOUNT_NAME) 
+print(LastName)  
 
 
 HEADERS = {
@@ -32,7 +32,7 @@ HEADERS = {
 def create_account():
     url = f"{INSTANCE_URL}/services/data/{API_VERSION}/sobjects/Account"
     payload = {
-        "Name": ACCOUNT_NAME,
+        "Name": ACCOUNT_NAME if Random_Needed else ACCOUNT_NAME_CONFIG,
         "TNV_Credit_Line_Less_Than_50k__c": "Yes",
         "TNV_Direct_Customer__c": "Yes",
         "TNV_Account_Upgrade_Status__c": "Sales Ops Review",
@@ -44,8 +44,10 @@ def create_account():
 
 def assign_territory(account_id):
     query = f"SELECT Id, Name FROM Territory2 WHERE Name LIKE '%{TERRITORY_NAME}%' LIMIT 1"
+    print(query)
     url = f"{INSTANCE_URL}/services/data/{API_VERSION}/query/?q={query}"
     response = requests.get(url, headers=HEADERS)
+    print(response.json())
     records = response.json().get("records", [])
     if not records:
         return None
@@ -62,7 +64,7 @@ def assign_territory(account_id):
         return None
     return territory_id
 
-def create_contact(account_id):
+def create_contact(account_id,iterator):
     payload = dict(CONTACT_INFO)
     payload["AccountId"] = account_id
     payload["LastName"] = LastName  # Use the generated unique LastName
@@ -127,7 +129,6 @@ def create_opportunity(account_id):
     # Get Contact ID
     contact_query = f"SELECT Id FROM Contact WHERE AccountId = '{account_id}' LIMIT 1"
     contact_response = requests.get(f"{INSTANCE_URL}/services/data/{API_VERSION}/query", headers=HEADERS, params={'q': contact_query})
-    print(contact_response.status_code, contact_response.text)
     contact_id = contact_response.json().get("records", [{}])[0].get("Id")
 
     # Get Territory ID
@@ -183,7 +184,7 @@ def update_opp_win_reason(opportunity_id,reason):
 
 def create_quote(opportunity_id, account_id):
     payload = {
-        "SBQQ__StartDate__c": datetime.today().strftime('%Y-%m-%d'),
+        "SBQQ__StartDate__c": QUOTE_START_DATE.strftime('%Y-%m-%d'),
         "TNV_Subscription_Term__c": QUOTE_CONFIG["subscription_term"],
         "TNV_Billing_Frequency__c": QUOTE_CONFIG["billing_frequency"],
         "SBQQ__Opportunity2__c": opportunity_id,
@@ -227,14 +228,54 @@ def add_products_to_quote_by_code(quote_id):
         """
         exec_url = f"{INSTANCE_URL}/services/data/{API_VERSION}/tooling/executeAnonymous"
         requests.get(exec_url, headers=HEADERS, params={"anonymousBody": apex_code})
-        time.sleep(60)  # Brief pause to ensure processing
-        # calculator_apex = f""" String quoteJSON = SBQQ.ServiceRouter.read('SBQQ.QuoteAPI.QuoteReader', {quote_id});
-        # QuoteModel quote = (QuoteModel) JSON.deserialize(quoteJSON, QuoteModel.class);
-        # QuoteCalculator calculator = new QuoteCalculator();
-        # calculator.calculate(quote, 'TNV_Agentforce_QuoteCalculatorCallBack');"""
-        # requests.get(exec_url, headers=HEADERS, params={"anonymousBody": calculator_apex})
-        # time.sleep(30)  # Brief pause to ensure calculation
+        wait_for_jobs_to_complete(["TNV_Agentforce_AddProduct", "TNV_CalculateQuote"])
+    calculate_quote_via_apex(quote_id)
 
+
+def wait_for_jobs_to_complete(class_names, poll_interval=3, timeout=300):
+    """
+    Wait until all queued Apex jobs with the given class names are completed or aborted.
+    class_names: list of ApexClass names to monitor.
+    poll_interval: seconds between polls.
+    timeout: total seconds to wait.
+    """
+    import time
+    start_time = time.time()
+    names_str = ",".join([f"'{n}'" for n in class_names])
+
+    while True:
+        q = (
+            "SELECT ApexClass.Name, Status FROM AsyncApexJob "
+            f"WHERE ApexClass.Name IN ({names_str}) "
+            "AND Status IN ('Queued','Processing','Holding') AND  CreatedBy.name like '%Sivasankar%'"
+        )
+        url = f"{INSTANCE_URL}/services/data/{API_VERSION}/tooling/query"
+        resp = requests.get(url, headers=HEADERS, params={"q": q}).json()
+        records = resp.get("records", [])
+
+        if not records:  # nothing left in queued/processing
+            print("✅ All monitored jobs have finished.")
+            break
+
+        statuses = [f"{r['ApexClass']['Name']}:{r['Status']}" for r in records]
+        print(f"⏳ Still running: {statuses}")
+        if time.time() - start_time > timeout:
+            raise TimeoutError(f"Jobs {class_names} did not complete within {timeout} seconds.")
+        time.sleep(poll_interval)
+
+def calculate_quote_via_apex(quote_id):
+    """
+    Calls your TNV_QuoteCalcuatorForBot Apex REST class to trigger QuoteCalculator.
+    """
+    url = f"{INSTANCE_URL}/services/apexrest/Quote/quoteCalculator/"
+    payload = {"quoteId": quote_id}
+    resp = requests.post(url, headers=HEADERS, json=payload)
+    if resp.status_code == 200:
+        print(f"✅ Quote calculation triggered for {quote_id}")
+        wait_for_jobs_to_complete(["QueueableCalculatorService"])
+    else:
+        print(f"❌ Failed to trigger calculation: {resp.status_code}, {resp.text}")
+    return resp.json() if resp.text else {}
 
 def submit_Quote_For_Approval(quote_id):
     url = f"{INSTANCE_URL}/services/data/{API_VERSION}/tooling/executeAnonymous"
@@ -254,6 +295,7 @@ def submit_Quote_For_Approval(quote_id):
             print("❌ Anonymous Apex execution failed:", result.get("compileProblem", "Unknown error"))
     else:
         print("❌ Quote Submit for Approval Failed", response.status_code, response.text)
+
 
 def validate_quote(quote_id):
 
@@ -298,35 +340,43 @@ def check_OARA(quote_id):
     else:
         print(f"❌ Failed to update Quote {quote_id}: {response.text}")
         return False
+    
+def build_email_body(contact_info, account_id=None, opp_id=None, quote_id=None):
+    
+    lines = [f"Hello {contact_info.get('FirstName', 'User')},\n",
+             "The following records were created:\n"]
+
+    if account_id:
+        lines.append(f"    Account: {INSTANCE_URL}/{account_id}")
+    if opp_id:
+        lines.append(f"\n    Opportunity: {INSTANCE_URL}/{opp_id}")
+    if quote_id:
+        lines.append(f"\n    Quote: {INSTANCE_URL}/{quote_id}")
+
+    lines.append("\nRegards,\nSiva")
+
+    return "".join(lines)
 
 def send_email(account_id, opp_id, quote_id):
     email_url = f"{INSTANCE_URL}/services/data/{API_VERSION}/actions/standard/emailSimple"
-
-    account_url = f"{INSTANCE_URL}/{account_id}"
-    opp_url = f"{INSTANCE_URL}/{opp_id}"
-    quote_url = f"{INSTANCE_URL}/{quote_id}"
+    account_url = f"{INSTANCE_URL}/{account_id}" if account_id else "N/A"
+    opp_url = f"{INSTANCE_URL}/{opp_id}" if opp_id else "N/A"
+    quote_url = f"{INSTANCE_URL}/{quote_id}" if quote_id else "N/A"
 
     subject = f"Record Creation Summary - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-    body = f"""Hello {CONTACT_INFO["FirstName"] },
-
-    The following records were created:
-
-        Account: {account_url}
-
-        Opportunity: {opp_url}
-
-        Quote: {quote_url}
-
-    Regards,
-    Siva
-    """
+    body = build_email_body(
+        contact_info=CONTACT_INFO,
+        account_id=account_id,
+        opp_id=opp_id,
+        quote_id=quote_id
+    )
 
     payload = {
         "inputs": [{
             "emailBody": body,
             "emailBodyIsHtml": True,
             "emailAddresses": CONTACT_INFO["Email"],
-            "senderDisplayName": "Automation Bot",
+            "senderDisplayName": "Siva",
             "emailSubject": subject
         }]
     }
@@ -353,7 +403,7 @@ def send_email(account_id, opp_id, quote_id):
             opp_url,
             quote_url
         ])
-def main():
+def main(iteration=1):
     account_id = ACCOUNT_ID
     opp_id = OPPORTUNITY_ID
     quote_id = QUOTE_ID
@@ -372,7 +422,7 @@ def main():
             print("❌ Territory assignment failed.")
             return
         print('Creating Contact...')
-        contact = create_contact(account_id)
+        contact = create_contact(account_id,iteration)
         if not contact:
             print("❌ Contact creation failed.")
             return
@@ -390,56 +440,49 @@ def main():
             return 
         print(f"✅ Oracle Account Number synced for Account ID: {account_id}")
     
-    if IS_OPPORTUNITY_CREATION_NEEDED:
+    if IS_OPPORTUNITY_CREATION_NEEDED and account_id:
         print("Creating Opportunity...")
         opp_id = create_opportunity(account_id)
         update_opportunity_currency(opp_id)
         print(f"✅ Opportunity ID: {opp_id}")
 
-    if not opp_id and IS_OPPORTUNITY_CREATION_NEEDED:
-        print("❌ Opportunity creation failed.")
-        return
 
-    if IS_QUOTE_CREATION_NEEDED:
+    if IS_QUOTE_CREATION_NEEDED and opp_id:
         print("Creating Quote...")
         quote_id = create_quote(opp_id, account_id)
         update_quote_sector(quote_id)
-    if not quote_id:
-        print("❌ Quote creation failed.")
-        return
-    print(f"✅ Quote ID: {quote_id}")
-    if IS_PRODUCT_ADDITION_NEEDED:
+        print(f"✅ Quote ID: {quote_id}")
+
+    if IS_PRODUCT_ADDITION_NEEDED and quote_id:
         print("Adding products to Quote...")
         add_products_to_quote_by_code(quote_id)
-        print("Waiting for Some time to ensure products are added...")
-        time.sleep(120)
-        print(f"✅ Products added to Quote ID: {quote_id}")
-       
 
-    if IS_SUBMIT_QUOTE_FOR_APPROVAL_NEEDED:
+    if IS_SUBMIT_QUOTE_FOR_APPROVAL_NEEDED and quote_id:
         print("Submitting Quote for Approval...")
         submit_Quote_For_Approval(quote_id)
 
-    if IS_VALIDATE_QUOTE_NEEDED:
+    if IS_VALIDATE_QUOTE_NEEDED and quote_id:
         print("Validating Quote...")
         validate_quote(quote_id)
         time.sleep(10)
-    if IS_QUOTE_TO_ACCEPTED_NEEDED:
+    if IS_QUOTE_TO_ACCEPTED_NEEDED and quote_id:
         print("Updating Quote to Accepted...")
         update_quote_to_accepted(quote_id)
-        time.sleep(30)
 
-    if IS_OARA_NEEDED:
+    if IS_OARA_NEEDED and quote_id and opp_id:
         print("Checking OARA...")
         if update_opp_win_reason(opp_id, "Pricing"):
             check_OARA(quote_id)
             update_quote_to_accepted(quote_id)
         else:
             print("❌ Failed to update Opportunity with Win Reason.")
+
     send_email(account_id, opp_id, quote_id)
 
 if __name__ == "__main__":
     for i in range(NO_OF_RECORDS_TO_CREATE):
         print(f"Running iteration {i+1} of {NO_OF_RECORDS_TO_CREATE}")
-        main()
+        main(iteration=i+1)
     # send_email('001cc00000BENXyAAP','006cc00000BEXXyAAP','a0Kcc00000BENXyAAP')
+    # QUOTE_ID = 'a0zcc000005NVUrAAO'
+    # add_products_to_quote_by_code(QUOTE_ID)   
