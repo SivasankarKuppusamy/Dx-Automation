@@ -8,7 +8,6 @@ import string
 from datetime import datetime
 import os
 import csv
-from AddProductHelper import *
 def generate_unique_name(prefix):
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     rand_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))

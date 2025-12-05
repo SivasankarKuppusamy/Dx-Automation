@@ -15,7 +15,7 @@ Random_Needed = False
 
 ACCOUNT_NAME_CONFIG = "Account by Automation"
 
-IS_SEPERATE_ACCOUNT_CREATION_NEEDED = True
+OPPORTUNITY_NAME = "Opportunity - Time Zone"
 
 IS_OPPORTUNITY_CREATION_NEEDED = True
 OPPORTUNITY_ID = ''
@@ -55,7 +55,6 @@ ADDRESS = {
     "Name": "Test Address"
 }
 
-OPPORTUNITY_NAME = "Opportunity by Automation"
 QUOTE_CONFIG = {
     "subscription_term": 24,
     "billing_frequency": "Upfront",
