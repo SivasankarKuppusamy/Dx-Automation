@@ -8,6 +8,17 @@ import string
 from datetime import datetime
 import os
 import csv
+
+# Validate session before proceeding
+if not SESSION_ID:
+    print("❌ No valid session ID found. Please check your credentials.json file and ensure:")
+    print("   1. Correct Salesforce username and password")
+    print("   2. Instance URL is correct")
+    print("   3. Chrome browser can access Salesforce")
+    exit(1)
+
+print(f"✅ Using session for instance: {INSTANCE_URL}")
+print(f"✅ Session ID starts with: {SESSION_ID[:20]}...")
 def generate_unique_name(prefix):
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     rand_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
@@ -479,9 +490,17 @@ def main(iteration=1):
     send_email(account_id, opp_id, quote_id)
 
 if __name__ == "__main__":
+    start_time = datetime.now()
     for i in range(NO_OF_RECORDS_TO_CREATE):
         print(f"Running iteration {i+1} of {NO_OF_RECORDS_TO_CREATE}")
         main(iteration=i+1)
+    end_time = datetime.now()
+    duration = end_time - start_time
+    total_seconds = int(duration.total_seconds())
+    minutes = total_seconds // 60
+    seconds = total_seconds % 60
+    print(f"Total execution time: {minutes} minutes and {seconds} seconds")
+
     # send_email('001cc00000BENXyAAP','006cc00000BEXXyAAP','a0Kcc00000BENXyAAP')
     # QUOTE_ID = 'a0zcc000005NVUrAAO'
     # add_products_to_quote_by_code(QUOTE_ID)   
