@@ -223,14 +223,16 @@ def add_products_to_quote_by_code(quote_id):
     records = response.json().get("records", [])
 
     for record in records:
-        print(f"Adding product {record['ProductCode']} to Quote {quote_id}...")
+        product_code = record['ProductCode']
+        product_quantity = PRODUCT_CODE_QUANTITY_MAP.get(product_code, 1)  # Default to 1 if not found
+        print(f"Adding product {product_code} (Qty: {product_quantity}) to Quote {quote_id}...")
         product_id = record["Id"]
         apex_code = f"""
             TNV_Agentforce_AddProduct.Request request = new TNV_Agentforce_AddProduct.Request();  
             request.QuoteId = '{quote_id}';
             TNV_Agentforce_AddProduct.ProductDetail detail = new TNV_Agentforce_AddProduct.ProductDetail();  
             detail.productId = '{product_id}';
-            detail.productQuantity = {DEFAULT_QUANTITY};
+            detail.productQuantity = {product_quantity};
             detail.productDiscount = {DEFAULT_DISCOUNT};
             request.ProductDetails = new List<TNV_Agentforce_AddProduct.ProductDetail> {{ detail }};
             List<TNV_Agentforce_AddProduct.Request> requestList = new List<TNV_Agentforce_AddProduct.Request> {{ request }};
@@ -302,7 +304,7 @@ def submit_Quote_For_Approval(quote_id):
         if result.get("success"):
             print("✅ Quote Submitted for Approval successfully.")
         else:
-            print("❌ Anonymous Apex execution failed:", result.get("compileProblem", "Unknown error"))
+            print("❌ Anonymous Apex execution failed:", result)
     else:
         print("❌ Quote Submit for Approval Failed", response.status_code, response.text)
 
