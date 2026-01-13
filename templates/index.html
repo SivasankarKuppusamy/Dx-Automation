@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salesforce Automation UI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="main-container">
+        <header class="main-header">
+            <h1>Salesforce Automation Tool</h1>
+            <p class="subtitle">Automate Account, Opportunity, Quote & Product Creation</p>
+        </header>
+
+        <div class="split-layout">
+            <!-- Left Panel: Configuration -->
+            <div class="left-panel">
+                <form id="automationForm">
+            <!-- Session Configuration -->
+            <section class="card">
+                <h2>Session Configuration</h2>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="session_id">Session ID *</label>
+                        <input type="text" id="session_id" name="session_id" required 
+                               placeholder="Enter your Salesforce session ID">
+                    </div>
+                    <div class="form-group">
+                        <label for="instance_url">Instance *</label>
+                        <select id="instance_url" name="instance_url" required>
+                            <option value="">Select instance</option>
+                            <option value="tdwarriors">tdwarriors</option>
+                            <option value="tecd">tecd</option>
+                            <option value="tecq">tecq</option>
+                            <option value="tecs">tecs</option>
+                            <option value="tecu">tecu</option>
+                            <option value="dxuat">dxuat</option>
+                            <option value="other">other</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="customInstanceField" style="display: none;">
+                        <label for="custom_instance_name">Custom Instance Name</label>
+                        <input type="text" id="custom_instance_name" name="custom_instance_name" 
+                               placeholder="Enter custom instance name">
+                    </div>
+                    <div class="form-group">
+                        <label for="api_version">API Version</label>
+                        <input type="text" id="api_version" name="api_version" value="v58.0">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Account Settings -->
+            <section class="card">
+                <h2>Account Settings</h2>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="create_account" name="create_account">
+                        <span>Create New Account</span>
+                    </label>
+                </div>
+                <div id="accountFields" class="conditional-fields" style="display: none;">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="account_name">Account Name</label>
+                            <input type="text" id="account_name" name="account_name" 
+                                   value="Account by Automation">
+                        </div>
+                        <div class="form-group">
+                            <label for="territory_name">Territory Name</label>
+                            <input type="text" id="territory_name" name="territory_name" 
+                                   value="Americas">
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="random_name" name="random_name">
+                                <span>Generate Random Name</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div id="existingAccountField" style="display: block;">
+                    <div class="form-group">
+                        <label for="account_id">Existing Account ID</label>
+                        <input type="text" id="account_id" name="account_id" 
+                               placeholder="001cc00000ET0r0AAD">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Contact Information -->
+            <section class="card">
+                <h2>Contact Information</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="contact_firstname">First Name</label>
+                        <input type="text" id="contact_firstname" name="contact_firstname" 
+                               value="Siva">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact_email">Email</label>
+                        <input type="email" id="contact_email" name="contact_email" 
+                               value="sivasankar_k+randomstring@trimble.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact_phone">Phone</label>
+                        <input type="text" id="contact_phone" name="contact_phone" 
+                               value="+11033567890">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact_role">Contact Role</label>
+                        <input type="text" id="contact_role" name="contact_role" 
+                               value="Invoice Recipient">
+                    </div>
+                    <div class="form-group">
+                        <label for="preferred_language">Preferred Language</label>
+                        <input type="text" id="preferred_language" name="preferred_language" 
+                               value="English">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Address Information -->
+            <section class="card">
+                <h2>Address Information</h2>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="address_street">Street</label>
+                        <input type="text" id="address_street" name="address_street" 
+                               value="4803 Worthington Drive">
+                    </div>
+                    <div class="form-group">
+                        <label for="address_city">City</label>
+                        <input type="text" id="address_city" name="address_city" 
+                               value="Westville">
+                    </div>
+                    <div class="form-group">
+                        <label for="address_state">State</label>
+                        <input type="text" id="address_state" name="address_state" 
+                               value="Ohio">
+                    </div>
+                    <div class="form-group">
+                        <label for="address_country">Country</label>
+                        <input type="text" id="address_country" name="address_country" 
+                               value="United States">
+                    </div>
+                    <div class="form-group">
+                        <label for="address_country_code">Country Code</label>
+                        <input type="text" id="address_country_code" name="address_country_code" 
+                               value="US">
+                    </div>
+                    <div class="form-group">
+                        <label for="address_postal">Postal Code</label>
+                        <input type="text" id="address_postal" name="address_postal" 
+                               value="43083">
+                    </div>
+                    <div class="form-group">
+                        <label for="address_name">Address Name</label>
+                        <input type="text" id="address_name" name="address_name" 
+                               value="Test Address">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Opportunity Settings -->
+            <section class="card">
+                <h2>Opportunity Settings</h2>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="create_opportunity" name="create_opportunity">
+                        <span>Create New Opportunity</span>
+                    </label>
+                </div>
+                <div id="opportunityFields" class="conditional-fields" style="display: none;">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="opportunity_name">Opportunity Name</label>
+                            <input type="text" id="opportunity_name" name="opportunity_name" 
+                                   value="Opportunity - Time Zone">
+                        </div>
+                    </div>
+                </div>
+                <div id="existingOpportunityField" style="display: block;">
+                    <div class="form-group">
+                        <label for="opportunity_id">Existing Opportunity ID</label>
+                        <input type="text" id="opportunity_id" name="opportunity_id" 
+                               placeholder="006cc00000BEXXyAAP">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quote Settings -->
+            <section class="card">
+                <h2>Quote Settings</h2>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="create_quote" name="create_quote">
+                        <span>Create New Quote</span>
+                    </label>
+                </div>
+                <div id="quoteFields" class="conditional-fields" style="display: none;">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="quote_start_date">Quote Start Date</label>
+                            <input type="date" id="quote_start_date" name="quote_start_date">
+                        </div>
+                        <div class="form-group">
+                            <label for="subscription_term">Subscription Term (months)</label>
+                            <input type="number" id="subscription_term" name="subscription_term" 
+                                   value="24" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="billing_frequency">Billing Frequency</label>
+                            <select id="billing_frequency" name="billing_frequency">
+                                <option value="Upfront" selected>Upfront</option>
+                                <option value="Monthly">Monthly</option>
+                                <option value="Quarterly">Quarterly</option>
+                                <option value="Annual">Annual</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sector">Sector</label>
+                            <input type="text" id="sector" name="sector" 
+                                   value="CES - Construction Enterprise Solutions">
+                        </div>
+                        <div class="form-group">
+                            <label for="payment_terms">Payment Terms</label>
+                            <input type="text" id="payment_terms" name="payment_terms" 
+                                   value="30 NET">
+                        </div>
+                        <div class="form-group">
+                            <label for="currency">Currency</label>
+                            <select id="currency" name="currency">
+                                <option value="USD" selected>USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="CAD">CAD</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="ramp">Multi-Year with Ramps</label>
+                            <select id="ramp" name="ramp">
+                                <option value="No" selected>No</option>
+                                <option value="Yes">Yes</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="escPercentField" style="display: none;">
+                            <label for="esc_percent">Escalation Percent</label>
+                            <input type="number" id="esc_percent" name="esc_percent" 
+                                   value="5" min="0">
+                        </div>
+                        <div class="form-group" id="businessTypeField" style="display: none;">
+                            <label for="business_type">Business Type</label>
+                            <input type="text" id="business_type" name="business_type" 
+                                   value="Other Businesses with Price Ramps">
+                        </div>
+                        <div class="form-group">
+                            <label for="discount">Discount (%)</label>
+                            <input type="number" id="discount" name="discount" 
+                                   value="0" min="0" max="100" step="0.01">
+                        </div>
+                    </div>
+                </div>
+                <div id="existingQuoteField" style="display: block;">
+                    <div class="form-group">
+                        <label for="quote_id">Existing Quote ID</label>
+                        <input type="text" id="quote_id" name="quote_id" 
+                               placeholder="a0zcc000005NVUrAAO">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Product Settings -->
+            <section class="card">
+                <h2>Product Settings</h2>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="add_products" name="add_products">
+                        <span>Add Products to Quote</span>
+                    </label>
+                </div>
+                <div id="productFields" class="conditional-fields" style="display: none;">
+                    <div class="form-group full-width">
+                        <label for="products">Product Codes with Quantities</label>
+                        <textarea id="products" name="products" rows="4" 
+                                  placeholder="Enter products as: PRODUCT-CODE-1:5, PRODUCT-CODE-2:10&#10;Example: BN-SB-TC1EST-ACE:1">BN-SB-TC1EST-ACE:1</textarea>
+                        <small>Format: PRODUCT-CODE:QUANTITY (comma-separated)</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Approval & Validation -->
+            <section class="card">
+                <h2>Approval & Validation</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="submit_approval" name="submit_approval">
+                            <span>Submit for Approval</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="validate_quote" name="validate_quote">
+                            <span>Validate Quote</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="quote_to_accepted" name="quote_to_accepted">
+                            <span>Update Quote to Accepted</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="oara_needed" name="oara_needed">
+                            <span>Check OARA</span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Submit Button -->
+            <div class="button-container">
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    Run Automation
+                </button>
+                <button type="button" class="btn btn-danger" id="abortBtn" style="display: none;">
+                    Abort Process
+                </button>
+            </div>
+        </form>
+        </div>
+
+        <!-- Right Panel: Live Status and Logs -->
+        <div class="right-panel">
+            <div class="status-header">
+                <h2>Execution Monitor</h2>
+                <div id="overallStatus" class="overall-status">Ready</div>
+            </div>
+
+            <!-- Current Step Display -->
+            <div id="currentStepSection" class="current-step-section" style="display: none;">
+                <h3>Current Step</h3>
+                <div id="currentStep" class="current-step">
+                    <span class="step-icon">⟳</span>
+                    <span class="step-text">Initializing...</span>
+                </div>
+            </div>
+
+            <!-- Steps Progress -->
+            <div id="stepsSection" class="steps-section" style="display: none;">
+                <h3>Progress</h3>
+                <div id="stepsList" class="steps-list"></div>
+            </div>
+
+            <!-- Live Logs -->
+            <div id="logsSection" class="logs-section">
+                <h3>Execution Logs</h3>
+                <div id="logs" class="logs">
+                    <div class="log-entry log-info">Ready to start automation...</div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div id="resultsSection" class="results-section" style="display: none;">
+                <h3>Results</h3>
+                <div id="results" class="results"></div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

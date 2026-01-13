@@ -66,7 +66,15 @@ Business_type = "Other Businesses with Price Ramps" if RAMP == "Yes" else ""
 
 PAYMENT_TERMS = "30 NET"
 
-PRODUCT_CODES = ["BN-SB-TC1EST-ACE"]
+# Product Codes with Quantities
+PRODUCT_CODE_QUANTITY_MAP = {
+    "BN-SB-TC1EST-ACE": 1
+    # Add more products with quantities as needed
+    # "PRODUCT-CODE-2": 5,
+    # "PRODUCT-CODE-3": 10,
+}
+
+PRODUCT_CODES = list(PRODUCT_CODE_QUANTITY_MAP.keys())
 
 DEFAULT_CURRENCY = "USD"
 DEFAULT_DISCOUNT = 0
