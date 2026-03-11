@@ -9,19 +9,19 @@ API_VERSION = 'v58.0'
 
 IS_ACCOUNT_CREATION_NEEDED = False  
 
-ACCOUNT_ID = '001cc00000ET0r0AAD'
+ACCOUNT_ID = ''
 
 Random_Needed = False
 
 ACCOUNT_NAME_CONFIG = "Account by Automation"
 
-OPPORTUNITY_NAME = "Opportunity - Time Zone"
+OPPORTUNITY_NAME = "Opportunity - by Automation"
 
 IS_OPPORTUNITY_CREATION_NEEDED = True
 OPPORTUNITY_ID = ''
 
 IS_QUOTE_CREATION_NEEDED = True
-QUOTE_ID = 'a0zcc000005r9VJAAY'
+QUOTE_ID = ''
 
 QUOTE_START_DATE = datetime.today() - timedelta(days=1)
 

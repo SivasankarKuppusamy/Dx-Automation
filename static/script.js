@@ -184,8 +184,22 @@ document.getElementById('automationForm').addEventListener('submit', async funct
     }
     
     // Check if quote creation is not selected, then quote ID is required
-    if (!data.create_quote && (!data.quote_id || data.quote_id.trim() === '')) {
+    if (!data.create_quote && (data.add_products || data.oara || data.submit_approval || data.validate_quote || data.quote_to_accepted || data.oara_needed) && (!data.quote_id || data.quote_id.trim() === '')) {
         errors.push('Quote ID is required when not creating a new quote');
+    }
+    
+    // Check if add products is selected, then products must be provided
+    if (data.add_products && (!data.products || data.products.trim() === '')) {
+        errors.push('Products are required when Add Products is selected');
+    }
+    // Check if add products is selected, then products must be provided
+    if (data.oara) {
+        if (!data.opportunity_id || data.opportunity_id.trim() === '') {
+            errors.push('Opportunity ID is required when OARA is checked');
+        }
+        if (!data.quote_id || data.quote_id.trim() === '') {
+            errors.push('Quote ID is required when OARA is checked');
+        }
     }
     
     // Check if add products is selected, then products must be provided

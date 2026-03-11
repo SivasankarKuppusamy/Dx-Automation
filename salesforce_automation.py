@@ -265,6 +265,7 @@ class SalesforceAutomation:
             headers=self.headers,
             params={'q': contact_query}
         )
+        print(contact_response.json())
         contact_id = contact_response.json().get("records", [{}])[0].get("Id")
         
         # Get Territory ID
@@ -382,16 +383,38 @@ class SalesforceAutomation:
         self.update_step('Add Products to Quote', 'running')
         self.log("Adding products to Quote...")
         
-        product_code_quantity_map = self.config.get('PRODUCT_CODE_QUANTITY_MAP', {})
-        product_codes = list(product_code_quantity_map.keys())
+        product_input = self.config.get('PRODUCT_CODE_QUANTITY_MAP', {})
+
+        # Support both legacy dict input and ordered list input from UI.
+        if isinstance(product_input, dict):
+            product_lines = [
+                {'code': code, 'quantity': int(qty)}
+                for code, qty in product_input.items()
+            ]
+        else:
+            product_lines = []
+            for entry in product_input or []:
+                if not isinstance(entry, dict):
+                    continue
+                code = str(entry.get('code', '')).strip()
+                if not code:
+                    continue
+                product_lines.append({
+                    'code': code,
+                    'quantity': int(entry.get('quantity', 1))
+                })
+
+        product_codes = [line['code'] for line in product_lines]
+        unique_product_codes = list(dict.fromkeys(product_codes))
+        self.log(f"Adding {len(unique_product_codes)} Product codes: {product_codes}")
         
-        if not product_codes:
+        if not unique_product_codes:
             self.log("No products to add", 'warning')
             self.update_step('Add Products to Quote', 'skipped', 'No products specified')
             return True
         
         # Query all products by ProductCode
-        product_codes_str = ",".join([f"'{code}'" for code in product_codes])
+        product_codes_str = ",".join([f"'{code}'" for code in unique_product_codes])
         query = f"SELECT Id, ProductCode, Name FROM Product2 WHERE ProductCode IN ({product_codes_str})"
         
         try:
@@ -414,20 +437,29 @@ class SalesforceAutomation:
                 self.update_step('Add Products to Quote', 'error', 'Products not found')
                 return False
             
-            # Add each product using Agentforce API
+            product_lookup = {record.get('ProductCode'): record for record in records}
+
+            # Add each product line using Agentforce API.
             success_count = 0
             failed_count = 0
             
-            for record in records:
+            for line in product_lines:
                 if self.should_abort():
                     self.log("Product addition aborted by user", 'warning')
                     self.update_step('Add Products to Quote', 'error', 'Aborted by user')
                     return False
                 
-                product_code = record['ProductCode']
+                product_code = line['code']
+                record = product_lookup.get(product_code)
+
+                if not record:
+                    self.log(f"Product {product_code} not found", 'error')
+                    failed_count += 1
+                    continue
+
                 product_name = record.get('Name', product_code)
                 product_id = record["Id"]
-                product_quantity = int(product_code_quantity_map.get(product_code, 1))
+                product_quantity = int(line.get('quantity', 1))
                 
                 self.log(f"Adding product {product_code} (Qty: {product_quantity})...")
                 
@@ -466,7 +498,7 @@ class SalesforceAutomation:
             
             # Calculate quote after adding all products
             if success_count > 0:
-                self.log(f"Successfully added {success_count}/{len(records)} product(s)", 'success')
+                self.log(f"Successfully added {success_count}/{len(product_lines)} product line(s)", 'success')
                 self.calculate_quote_via_apex(quote_id)
                 
                 if failed_count > 0:

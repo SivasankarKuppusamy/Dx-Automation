@@ -10,7 +10,7 @@ echo.
 REM Get the directory where this batch file is located
 cd /d "%~dp0"
 
-echo [1/3] Checking Python installation...
+echo [1/2] Checking Python installation...
 python --version >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Python is not installed or not in PATH!

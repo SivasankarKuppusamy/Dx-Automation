@@ -235,22 +235,33 @@ def abort_execution(execution_id):
     })
 
 def parse_products(products_str):
-    """Parse products string into dictionary
+    """Parse products string into an ordered list of product lines.
     Format: PRODUCT-CODE-1:5, PRODUCT-CODE-2:10
+    Duplicate product codes are preserved as separate lines.
     """
     if not products_str:
-        return {}
+        return []
     
-    product_map = {}
+    product_lines = []
     for item in products_str.split(','):
         item = item.strip()
+        if not item:
+            continue
+
         if ':' in item:
-            code, qty = item.split(':')
-            product_map[code.strip()] = int(qty.strip())
+            code, qty = item.split(':', 1)
+            code = code.strip()
+            qty_value = int(qty.strip())
         else:
-            product_map[item] = 1
+            code = item
+            qty_value = 1
+
+        product_lines.append({
+            'code': code,
+            'quantity': qty_value
+        })
     
-    return product_map
+    return product_lines
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
