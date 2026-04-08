@@ -224,7 +224,7 @@ class SalesforceAutomation:
         
         return success
     
-    def wait_for_oracle_account_number(self, account_id, max_wait_secs=120, poll_interval_secs=10):
+    def wait_for_oracle_account_number(self, account_id, max_wait_secs=500, poll_interval_secs=10):
         """Wait for Oracle account number to be populated"""
         self.log("Waiting for Oracle Account Number...")
         waited = 0
