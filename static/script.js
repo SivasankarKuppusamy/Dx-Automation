@@ -91,6 +91,17 @@ document.getElementById('ramp').addEventListener('change', function() {
     }
 });
 
+// Toggle custom currency field when 'Other' is selected
+document.getElementById('currency').addEventListener('change', function() {
+    const customCurrencyField = document.getElementById('customCurrencyField');
+    if (this.value === 'Other') {
+        customCurrencyField.style.display = 'block';
+    } else {
+        customCurrencyField.style.display = 'none';
+        document.getElementById('custom_currency').value = '';
+    }
+});
+
 // Abort button handler
 document.getElementById('abortBtn').addEventListener('click', async function() {
     if (!currentExecutionId) return;

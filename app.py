@@ -137,7 +137,7 @@ def run_automation():
             
             # Other settings
             'PAYMENT_TERMS': data.get('payment_terms', '30 NET'),
-            'DEFAULT_CURRENCY': data.get('currency', 'USD'),
+            'DEFAULT_CURRENCY': data.get('custom_currency') if data.get('currency') == 'Other' else data.get('currency', 'USD'),
             'DEFAULT_DISCOUNT': float(data.get('discount', 0)),
         }
         
