@@ -673,7 +673,10 @@ class SalesforceAutomation:
     def check_oara(self, quote_id):
         """Check OARA"""
         self.log("Checking OARA...")
-        payload = {"TNV_Sale_Opps_Reviewed_and_Approved__c": True}
+        payload = { "TNV_AcceptedBy__c":None,
+                    "TNV_Quote_Validation_Status__c":"Bypass Validation",
+                    "TNV_Sale_Opps_Reviewed_and_Approved__c": True
+                }
         url = f"{self.instance_url}/services/data/{self.api_version}/sobjects/SBQQ__Quote__c/{quote_id}"
         
         response = requests.patch(url, headers=self.headers, json=payload)
@@ -863,9 +866,26 @@ Automation System"""
                 return self.results
         
         # OARA
-        if self.config.get('IS_OARA_NEEDED') and quote_id and opp_id:
+        if self.config.get('IS_OARA_NEEDED') and quote_id:
             if self.should_abort():
                 return self.results
+
+            # If opp_id not available, query it from the quote
+            if not opp_id:
+                opp_query = f"SELECT SBQQ__Opportunity2__c FROM SBQQ__Quote__c WHERE Id = '{quote_id}'"
+                opp_resp = requests.get(
+                    f"{self.instance_url}/services/data/{self.api_version}/query",
+                    headers=self.headers,
+                    params={"q": opp_query}
+                )
+                if opp_resp.status_code == 200:
+                    opp_records = opp_resp.json().get("records", [])
+                    if opp_records:
+                        opp_id = opp_records[0].get("SBQQ__Opportunity2__c")
+                        self.log(f"Opportunity ID fetched from Quote: {opp_id}", 'success')
+                if not opp_id:
+                    self.log("Could not determine Opportunity ID for OARA", 'error')
+                    return self.results
             
             result = self.update_opp_win_reason(opp_id, "Pricing")
             if self.should_abort():

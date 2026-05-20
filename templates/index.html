@@ -11,24 +11,19 @@
         <header class="main-header">
             <h1>Salesforce Automation Tool</h1>
             <p class="subtitle">Automate Account, Opportunity, Quote & Product Creation</p>
-        </header>
 
-        <div class="split-layout">
-            <!-- Left Panel: Configuration -->
-            <div class="left-panel">
-                <form id="automationForm">
-            <!-- Session Configuration -->
-            <section class="card">
+            <!-- Common Session Configuration -->
+            <section class="card session-card">
                 <h2>Session Configuration</h2>
                 <div class="form-grid">
                     <div class="form-group full-width">
                         <label for="session_id">Session ID *</label>
-                        <input type="text" id="session_id" name="session_id" required 
+                        <input type="text" id="session_id" name="session_id"
                                placeholder="Enter your Salesforce session ID">
                     </div>
                     <div class="form-group">
                         <label for="instance_url">Instance *</label>
-                        <select id="instance_url" name="instance_url" required>
+                        <select id="instance_url" name="instance_url">
                             <option value="">Select instance</option>
                             <option value="tdwarriors">tdwarriors</option>
                             <option value="tecd">tecd</option>
@@ -50,6 +45,19 @@
                     </div>
                 </div>
             </section>
+
+            <div class="tab-navigation">
+                <button class="tab-btn active" data-tab="automation-tab" onclick="switchTab('automation-tab')">Quote Automation</button>
+                <button class="tab-btn" data-tab="order-processing-tab" onclick="switchTab('order-processing-tab')">Order Processing</button>
+            </div>
+        </header>
+
+        <!-- Tab: Quote Automation -->
+        <div id="automation-tab" class="tab-content active">
+        <div class="split-layout">
+            <!-- Left Panel: Configuration -->
+            <div class="left-panel">
+                <form id="automationForm">
 
             <!-- Account Settings -->
             <section class="card">
@@ -380,7 +388,85 @@
                 <div id="results" class="results"></div>
             </div>
         </div>
-    </div>
+    </div> <!-- end split-layout -->
+    </div> <!-- end automation-tab -->
+
+    <!-- Tab: Order Processing -->
+    <div id="order-processing-tab" class="tab-content">
+        <div class="split-layout">
+            <!-- Left Panel: Order Processing Configuration -->
+            <div class="left-panel">
+                <form id="orderProcessingForm">
+
+                    <!-- Order ID -->
+                    <section class="card">
+                        <h2>Order Configuration</h2>
+                        <div class="form-group full-width">
+                            <label for="op_order_id">Order ID *</label>
+                            <input type="text" id="op_order_id" name="op_order_id" required
+                                   placeholder="801O800003tiKdDIAU">
+                        </div>
+                    </section>
+
+                    <!-- Batch Steps Selection -->
+                    <section class="card">
+                        <h2>Batch Steps</h2>
+                        <p class="card-description">Select which batch steps to run. Each step executes as a separate anonymous Apex transaction.</p>
+                        <div class="form-group" style="margin-bottom: 10px;">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="op_select_all" checked>
+                                <span><strong>Select All / Deselect All</strong></span>
+                            </label>
+                        </div>
+                        <div id="opStepsList" class="op-steps-list">
+                            <!-- Steps will be populated dynamically -->
+                        </div>
+                    </section>
+
+                    <!-- Submit Button -->
+                    <div class="button-container">
+                        <button type="submit" class="btn btn-primary" id="opSubmitBtn">
+                            Run Order Processing
+                        </button>
+                        <button type="button" class="btn btn-danger" id="opAbortBtn" style="display: none;">
+                            Abort Process
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right Panel: Order Processing Status -->
+            <div class="right-panel">
+                <div class="status-header">
+                    <h2>Order Processing Monitor</h2>
+                    <div id="opOverallStatus" class="overall-status">Ready</div>
+                </div>
+
+                <!-- Current Step Display -->
+                <div id="opCurrentStepSection" class="current-step-section" style="display: none;">
+                    <h3>Current Step</h3>
+                    <div id="opCurrentStep" class="current-step">
+                        <span class="step-icon">⟳</span>
+                        <span class="step-text">Initializing...</span>
+                    </div>
+                </div>
+
+                <!-- Steps Progress -->
+                <div class="steps-section">
+                    <h3>Batch Progress</h3>
+                    <div id="opStepsProgress" class="steps-list"></div>
+                </div>
+
+                <!-- Live Logs -->
+                <div class="logs-section">
+                    <h3>Execution Logs</h3>
+                    <div id="opLogs" class="logs">
+                        <div class="log-entry log-info">Ready to start order processing...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- end order-processing-tab -->
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>

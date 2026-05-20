@@ -157,6 +157,12 @@ document.getElementById('automationForm').addEventListener('submit', async funct
             data[checkbox.name] = false;
         }
     });
+
+    // Inject common session fields (outside the form)
+    data.session_id = document.getElementById('session_id').value;
+    data.instance_url = document.getElementById('instance_url').value;
+    data.custom_instance_name = document.getElementById('custom_instance_name').value;
+    data.api_version = document.getElementById('api_version').value;
     
     // === VALIDATION CHECKS ===
     const errors = [];
@@ -491,12 +497,23 @@ function updateLogs(logs) {
     logsDiv.scrollTop = logsDiv.scrollHeight;
 }
 
+function getFullInstanceUrl() {
+    const selected = document.getElementById('instance_url').value;
+    if (!selected) return '';
+    if (selected === 'prod') return 'https://trimbledx.my.salesforce.com';
+    if (selected === 'other') {
+        const custom = document.getElementById('custom_instance_name').value.trim();
+        return custom ? `https://trimbledx--${custom}.sandbox.my.salesforce.com` : '';
+    }
+    return `https://trimbledx--${selected}.sandbox.my.salesforce.com`;
+}
+
 function showResults(results) {
     const resultsSection = document.getElementById('resultsSection');
     const resultsDiv = document.getElementById('results');
     
     let resultsHTML = '';
-    const instanceUrl = document.getElementById('instance_url').value;
+    const instanceUrl = getFullInstanceUrl();
     
     if (results.account_id) {
         resultsHTML += `
@@ -541,4 +558,289 @@ function escapeHtml(text) {
         "'": '&#039;'
     };
     return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// ============ TAB SWITCHING ============
+
+function switchTab(tabId) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    // Remove active from all tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    // Show selected tab
+    document.getElementById(tabId).classList.add('active');
+    // Activate button
+    document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+}
+
+// ============ ORDER PROCESSING ============
+
+let opExecutionId = null;
+
+// Load order processing steps on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadOrderProcessingSteps();
+    
+});
+
+async function loadOrderProcessingSteps() {
+    try {
+        const response = await fetch('/api/order-processing/steps');
+        const result = await response.json();
+        
+        if (result.success) {
+            const container = document.getElementById('opStepsList');
+            container.innerHTML = result.steps.map((step, idx) => `
+                <div class="op-step-item">
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="op-step-checkbox" value="${step.id}" checked>
+                        <span><strong>Step ${idx + 1}:</strong> ${step.description} <small>(${step.name})</small></span>
+                    </label>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Failed to load order processing steps:', error);
+    }
+}
+
+// Select All / Deselect All
+document.getElementById('op_select_all').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.op-step-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+});
+
+// Abort button for order processing
+document.getElementById('opAbortBtn').addEventListener('click', async function() {
+    if (!opExecutionId) return;
+    
+    if (confirm('Are you sure you want to abort order processing?')) {
+        try {
+            const response = await fetch(`/api/abort/${opExecutionId}`, {
+                method: 'POST'
+            });
+            const result = await response.json();
+            if (result.success) {
+                this.disabled = true;
+                this.textContent = 'Aborting...';
+            }
+        } catch (error) {
+            console.error('Error aborting:', error);
+        }
+    }
+});
+
+// Order Processing form submission
+document.getElementById('orderProcessingForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('opSubmitBtn');
+    const abortBtn = document.getElementById('opAbortBtn');
+    const overallStatus = document.getElementById('opOverallStatus');
+    const currentStepSection = document.getElementById('opCurrentStepSection');
+    const stepsProgress = document.getElementById('opStepsProgress');
+    const logsDiv = document.getElementById('opLogs');
+    
+    // Gather data from common session fields
+    const sessionId = document.getElementById('session_id').value.trim();
+    const instanceUrl = document.getElementById('instance_url').value;
+    const customInstanceName = document.getElementById('custom_instance_name').value.trim();
+    const apiVersion = document.getElementById('api_version').value.trim();
+    const orderId = document.getElementById('op_order_id').value.trim();
+    
+    // Get selected steps
+    const selectedSteps = Array.from(document.querySelectorAll('.op-step-checkbox:checked'))
+        .map(cb => cb.value);
+    
+    // Validation
+    const errors = [];
+    if (!sessionId) errors.push('Session ID is required');
+    if (!instanceUrl) errors.push('Instance selection is required');
+    if (instanceUrl === 'other' && !customInstanceName) errors.push('Custom Instance Name is required');
+    if (!orderId) errors.push('Order ID is required');
+    if (selectedSteps.length === 0) errors.push('At least one batch step must be selected');
+    
+    if (errors.length > 0) {
+        alert('Please fix the following errors:\n\n' + errors.join('\n'));
+        return;
+    }
+    
+    // Disable submit, enable abort
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Running...';
+    abortBtn.style.display = 'inline-block';
+    abortBtn.disabled = false;
+    abortBtn.textContent = 'Abort Process';
+    
+    // Clear previous
+    stepsProgress.innerHTML = '';
+    logsDiv.innerHTML = '';
+    overallStatus.textContent = 'Starting...';
+    overallStatus.className = 'overall-status running';
+    
+    try {
+        const response = await fetch('/api/order-processing/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                session_id: sessionId,
+                instance_url: instanceUrl,
+                custom_instance_name: customInstanceName,
+                api_version: apiVersion,
+                order_id: orderId,
+                selected_steps: selectedSteps
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Unknown error');
+        }
+        
+        opExecutionId = result.execution_id;
+        pollOrderProcessingStatus(opExecutionId);
+        
+    } catch (error) {
+        overallStatus.textContent = 'Error';
+        overallStatus.className = 'overall-status error';
+        logsDiv.innerHTML = `<div class="log-entry error"><strong>Error:</strong> ${escapeHtml(error.message)}</div>`;
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Run Order Processing';
+        abortBtn.style.display = 'none';
+    }
+});
+
+async function pollOrderProcessingStatus(executionId) {
+    const overallStatus = document.getElementById('opOverallStatus');
+    const currentStepSection = document.getElementById('opCurrentStepSection');
+    const currentStep = document.getElementById('opCurrentStep');
+    const stepsProgress = document.getElementById('opStepsProgress');
+    const logsDiv = document.getElementById('opLogs');
+    const submitBtn = document.getElementById('opSubmitBtn');
+    const abortBtn = document.getElementById('opAbortBtn');
+    
+    const pollInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`/api/status/${executionId}`);
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error('Failed to get status');
+            }
+            
+            const data = result.data;
+            
+            // Update overall status
+            if (data.status) {
+                overallStatus.textContent = data.status;
+                overallStatus.className = 'overall-status ' + data.status;
+            }
+            
+            // Update current step
+            if (data.current_step) {
+                currentStepSection.style.display = 'block';
+                const stepText = currentStep.querySelector('.step-text');
+                if (stepText) stepText.textContent = data.current_step;
+            } else {
+                currentStepSection.style.display = 'none';
+            }
+            
+            // Update steps progress
+            if (data.steps && data.steps.length > 0) {
+                updateOpStepsList(data.steps);
+            }
+            
+            // Update logs
+            if (data.logs && data.logs.length > 0) {
+                updateOpLogs(data.logs);
+            }
+            
+            // Check terminal states
+            if (data.status === 'completed' || data.status === 'error' || data.status === 'aborted') {
+                clearInterval(pollInterval);
+                currentStepSection.style.display = 'none';
+                
+                if (data.status === 'error' && data.error) {
+                    logsDiv.innerHTML += `<div class="log-entry error"><strong>Error:</strong> ${escapeHtml(data.error)}</div>`;
+                }
+                
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Run Order Processing';
+                abortBtn.style.display = 'none';
+                opExecutionId = null;
+            }
+        } catch (error) {
+            clearInterval(pollInterval);
+            overallStatus.textContent = 'Error';
+            overallStatus.className = 'overall-status error';
+            logsDiv.innerHTML += `<div class="log-entry error"><strong>Polling Error:</strong> ${escapeHtml(error.message)}</div>`;
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Run Order Processing';
+            abortBtn.style.display = 'none';
+            opExecutionId = null;
+        }
+    }, 1000);
+}
+
+function updateOpStepsList(steps) {
+    const stepsProgress = document.getElementById('opStepsProgress');
+    
+    stepsProgress.innerHTML = steps.map(step => {
+        let icon = '○';
+        let statusClass = 'pending';
+        
+        switch (step.status) {
+            case 'running': icon = '⟳'; statusClass = 'running'; break;
+            case 'success': icon = '✓'; statusClass = 'success'; break;
+            case 'error': icon = '✗'; statusClass = 'error'; break;
+            case 'skipped': icon = '⊘'; statusClass = 'skipped'; break;
+        }
+        
+        let detailsHTML = '';
+        if (step.duration) detailsHTML = `<span class="step-duration">${step.duration}s</span>`;
+        if (step.message) detailsHTML += `<div class="step-message">${escapeHtml(step.message)}</div>`;
+        
+        return `
+            <div class="step-item ${statusClass}">
+                <span class="step-icon">${icon}</span>
+                <span class="step-name">${escapeHtml(step.name)}</span>
+                ${detailsHTML}
+            </div>
+        `;
+    }).join('');
+    
+    const lastStep = stepsProgress.lastElementChild;
+    if (lastStep) lastStep.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function updateOpLogs(logs) {
+    const logsDiv = document.getElementById('opLogs');
+    const currentLogCount = logsDiv.children.length;
+    const newLogs = logs.slice(currentLogCount);
+    
+    newLogs.forEach(log => {
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        
+        let logText = typeof log === 'string' ? log : (log.message || JSON.stringify(log));
+        const logLower = logText.toLowerCase();
+        
+        if (logLower.includes('error') || logLower.includes('failed')) {
+            logEntry.classList.add('error');
+        } else if (logLower.includes('success') || logLower.includes('completed')) {
+            logEntry.classList.add('success');
+        } else if (logLower.includes('warning')) {
+            logEntry.classList.add('warning');
+        }
+        
+        logEntry.textContent = logText;
+        logsDiv.appendChild(logEntry);
+    });
+    
+    logsDiv.scrollTop = logsDiv.scrollHeight;
 }

@@ -45,6 +45,84 @@ body {
     box-shadow: var(--shadow);
 }
 
+/* Tab Navigation */
+.tab-navigation {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.tab-btn {
+    padding: 10px 24px;
+    border: 2px solid var(--primary-color);
+    background: transparent;
+    color: var(--primary-color);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.tab-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Order Processing Styles */
+.op-steps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.op-step-item {
+    padding: 8px 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+}
+
+.op-step-item label {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.op-step-item small {
+    color: #666;
+    font-style: italic;
+}
+
+.card-description {
+    color: #666;
+    font-size: 13px;
+    margin-bottom: 12px;
+}
+
+.session-card {
+    text-align: left;
+    margin-top: 20px;
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
 .split-layout {
     display: grid;
     grid-template-columns: 1fr 1fr;

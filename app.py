@@ -3,6 +3,7 @@
 
 from flask import Flask, render_template, request, jsonify, session
 from salesforce_automation import SalesforceAutomation
+from order_processing import ORDER_PROCESSING_STEPS, run_order_processing
 from datetime import datetime, timedelta
 import json
 import os
@@ -262,6 +263,85 @@ def parse_products(products_str):
         })
     
     return product_lines
+
+
+@app.route('/api/order-processing/steps', methods=['GET'])
+def get_order_processing_steps():
+    """Return available order processing steps for the UI"""
+    return jsonify({
+        'success': True,
+        'steps': ORDER_PROCESSING_STEPS
+    })
+
+
+@app.route('/api/order-processing/run', methods=['POST'])
+def run_order_processing_endpoint():
+    """Run order processing batch steps as separate anonymous Apex transactions"""
+    try:
+        data = request.json
+
+        session_id = data.get('session_id', '')
+        instance_url = expand_instance_url(
+            data.get('instance_url', ''),
+            data.get('custom_instance_name', '')
+        )
+        api_version = data.get('api_version', 'v58.0')
+        order_id = data.get('order_id', '').strip()
+        selected_steps = data.get('selected_steps', [])
+
+        # Validation
+        if not session_id:
+            return jsonify({'success': False, 'error': 'Session ID is required'}), 400
+        if not order_id:
+            return jsonify({'success': False, 'error': 'Order ID is required'}), 400
+        if not selected_steps:
+            return jsonify({'success': False, 'error': 'At least one step must be selected'}), 400
+
+        # Create execution entry
+        execution_id = 'op_' + str(datetime.now().timestamp())
+        abort_flags[execution_id] = False
+        execution_status[execution_id] = {
+            'status': 'running',
+            'current_step': 'Initializing Order Processing',
+            'steps': [],
+            'logs': [f'[INFO] Starting Order Processing for Order: {order_id}'],
+            'results': {'order_id': order_id}
+        }
+
+        def run_in_background():
+            try:
+                results = run_order_processing(
+                    instance_url, api_version, session_id, order_id,
+                    selected_steps, execution_id, execution_status, abort_flags
+                )
+                if not abort_flags.get(execution_id):
+                    execution_status[execution_id]['status'] = 'completed'
+                    execution_status[execution_id]['current_step'] = ''
+                    execution_status[execution_id]['logs'].append(
+                        f'[INFO] Order Processing completed for Order: {order_id}'
+                    )
+            except Exception as e:
+                import traceback
+                execution_status[execution_id]['status'] = 'error'
+                execution_status[execution_id]['error'] = str(e)
+                execution_status[execution_id]['error_details'] = traceback.format_exc()
+                execution_status[execution_id]['logs'].append(f'[ERROR] {str(e)}')
+
+        thread = threading.Thread(target=run_in_background)
+        thread.start()
+
+        return jsonify({
+            'success': True,
+            'execution_id': execution_id
+        })
+
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_details': traceback.format_exc()
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
