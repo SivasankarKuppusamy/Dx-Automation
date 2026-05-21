@@ -651,6 +651,7 @@ document.getElementById('orderProcessingForm').addEventListener('submit', async 
     const customInstanceName = document.getElementById('custom_instance_name').value.trim();
     const apiVersion = document.getElementById('api_version').value.trim();
     const orderId = document.getElementById('op_order_id').value.trim();
+    const waitTime = parseFloat(document.getElementById('op_wait_time').value) || 1;
     
     // Get selected steps
     const selectedSteps = Array.from(document.querySelectorAll('.op-step-checkbox:checked'))
@@ -692,7 +693,8 @@ document.getElementById('orderProcessingForm').addEventListener('submit', async 
                 custom_instance_name: customInstanceName,
                 api_version: apiVersion,
                 order_id: orderId,
-                selected_steps: selectedSteps
+                selected_steps: selectedSteps,
+                wait_time: waitTime
             })
         });
         

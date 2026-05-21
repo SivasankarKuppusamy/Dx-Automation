@@ -118,10 +118,11 @@ def execute_anonymous_apex(instance_url, api_version, session_id, apex_code):
         }
 
 
-def run_order_processing(instance_url, api_version, session_id, order_id, selected_steps, execution_id, execution_status, abort_flags):
+def run_order_processing(instance_url, api_version, session_id, order_id, selected_steps, execution_id, execution_status, abort_flags, wait_time=1):
     """Run selected order processing steps sequentially as separate transactions."""
     results = []
     total_steps = len(selected_steps)
+    wait_seconds = wait_time * 60  # Convert minutes to seconds
 
     for idx, step_id in enumerate(selected_steps):
         # Check abort
@@ -182,6 +183,29 @@ def run_order_processing(instance_url, api_version, session_id, order_id, select
         # Re-assign to trigger update
         execution_status[execution_id]['steps'] = list(execution_status[execution_id]['steps'])
         results.append({'step_id': step_id, 'step_name': step_name, **result, 'duration': f"{duration:.1f}s"})
+
+        # Wait between batches (skip after last step)
+        if idx < total_steps - 1 and wait_seconds > 0:
+            # Check abort before waiting
+            if abort_flags and abort_flags.get(execution_id, False):
+                execution_status[execution_id]['status'] = 'aborted'
+                execution_status[execution_id]['logs'].append('[ABORT] User requested to abort order processing')
+                break
+            execution_status[execution_id]['current_step'] = f"Waiting {wait_time} min before next batch..."
+            execution_status[execution_id]['logs'].append(
+                f'[INFO] Waiting {wait_time} minute(s) before next batch...'
+            )
+            # Sleep in small increments to allow abort checks
+            waited = 0
+            while waited < wait_seconds:
+                if abort_flags and abort_flags.get(execution_id, False):
+                    execution_status[execution_id]['status'] = 'aborted'
+                    execution_status[execution_id]['logs'].append('[ABORT] User requested to abort order processing')
+                    break
+                time.sleep(min(5, wait_seconds - waited))
+                waited += 5
+            if abort_flags and abort_flags.get(execution_id, False):
+                break
 
     return results
 

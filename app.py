@@ -288,6 +288,7 @@ def run_order_processing_endpoint():
         api_version = data.get('api_version', 'v58.0')
         order_id = data.get('order_id', '').strip()
         selected_steps = data.get('selected_steps', [])
+        wait_time = float(data.get('wait_time', 1))
 
         # Validation
         if not session_id:
@@ -312,7 +313,7 @@ def run_order_processing_endpoint():
             try:
                 results = run_order_processing(
                     instance_url, api_version, session_id, order_id,
-                    selected_steps, execution_id, execution_status, abort_flags
+                    selected_steps, execution_id, execution_status, abort_flags, wait_time
                 )
                 if not abort_flags.get(execution_id):
                     execution_status[execution_id]['status'] = 'completed'
