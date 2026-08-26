@@ -4,6 +4,8 @@
 from flask import Flask, render_template, request, jsonify, session
 from salesforce_automation import SalesforceAutomation
 from order_processing import ORDER_PROCESSING_STEPS, run_order_processing
+from sf_auth import get_access_token
+from credentials import ENVIRONMENTS
 from datetime import datetime, timedelta
 import json
 import os
@@ -69,10 +71,19 @@ def run_automation():
             data.get('instance_url', ''),
             data.get('custom_instance_name', '')
         )
-        
+
+        # Look up credentials for the selected environment
+        env_key = data.get('instance_url', '').strip().lower()
+        if not ENVIRONMENTS.get(env_key):
+            return jsonify({'success': False, 'error': f'No credentials configured for environment "{env_key}". Add them to credentials.py.'}), 400
+        try:
+            access_token, instance_url = get_access_token(env_key)
+        except RuntimeError as auth_err:
+            return jsonify({'success': False, 'error': str(auth_err)}), 401
+
         # Build configuration from form data
         config = {
-            'SESSION_ID': data.get('session_id', ''),
+            'SESSION_ID': access_token,
             'INSTANCE_URL': instance_url,
             'API_VERSION': data.get('api_version', 'v58.0'),
             
@@ -142,12 +153,7 @@ def run_automation():
             'DEFAULT_DISCOUNT': float(data.get('discount', 0)),
         }
         
-        # Validate session ID
-        if not config['SESSION_ID']:
-            return jsonify({
-                'success': False,
-                'error': 'Session ID is required'
-            }), 400
+        # SESSION_ID is already validated via OAuth above
         
         # Run automation in a separate thread
         execution_id = str(datetime.now().timestamp())
@@ -280,7 +286,6 @@ def run_order_processing_endpoint():
     try:
         data = request.json
 
-        session_id = data.get('session_id', '')
         instance_url = expand_instance_url(
             data.get('instance_url', ''),
             data.get('custom_instance_name', '')
@@ -290,9 +295,18 @@ def run_order_processing_endpoint():
         selected_steps = data.get('selected_steps', [])
         wait_time = float(data.get('wait_time', 1))
 
+        # Look up credentials for the selected environment
+        op_env_key = data.get('instance_url', '').strip().lower()
+        if not ENVIRONMENTS.get(op_env_key):
+            return jsonify({'success': False, 'error': f'No credentials configured for environment "{op_env_key}". Add them to credentials.py.'}), 400
+        try:
+            session_id, instance_url = get_access_token(op_env_key)
+        except RuntimeError as auth_err:
+            return jsonify({'success': False, 'error': str(auth_err)}), 401
+
         # Validation
-        if not session_id:
-            return jsonify({'success': False, 'error': 'Session ID is required'}), 400
+        if not order_id:
+            return jsonify({'success': False, 'error': 'Order ID is required'}), 400
         if not order_id:
             return jsonify({'success': False, 'error': 'Order ID is required'}), 400
         if not selected_steps:

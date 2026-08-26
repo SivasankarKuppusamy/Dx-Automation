@@ -159,7 +159,6 @@ document.getElementById('automationForm').addEventListener('submit', async funct
     });
 
     // Inject common session fields (outside the form)
-    data.session_id = document.getElementById('session_id').value;
     data.instance_url = document.getElementById('instance_url').value;
     data.custom_instance_name = document.getElementById('custom_instance_name').value;
     data.api_version = document.getElementById('api_version').value;
@@ -175,11 +174,6 @@ document.getElementById('automationForm').addEventListener('submit', async funct
     // Check if 'other' is selected, then custom instance name must be provided
     if (data.instance_url === 'other' && (!data.custom_instance_name || data.custom_instance_name.trim() === '')) {
         errors.push('Custom Instance Name is required when "other" is selected');
-    }
-    
-    // Check if session ID is provided
-    if (!data.session_id || data.session_id.trim() === '') {
-        errors.push('Session ID is required');
     }
     
     // Check if ramp is Yes, then ESC percent and business type must be provided
@@ -646,7 +640,6 @@ document.getElementById('orderProcessingForm').addEventListener('submit', async 
     const logsDiv = document.getElementById('opLogs');
     
     // Gather data from common session fields
-    const sessionId = document.getElementById('session_id').value.trim();
     const instanceUrl = document.getElementById('instance_url').value;
     const customInstanceName = document.getElementById('custom_instance_name').value.trim();
     const apiVersion = document.getElementById('api_version').value.trim();
@@ -659,7 +652,6 @@ document.getElementById('orderProcessingForm').addEventListener('submit', async 
     
     // Validation
     const errors = [];
-    if (!sessionId) errors.push('Session ID is required');
     if (!instanceUrl) errors.push('Instance selection is required');
     if (instanceUrl === 'other' && !customInstanceName) errors.push('Custom Instance Name is required');
     if (!orderId) errors.push('Order ID is required');
@@ -688,7 +680,6 @@ document.getElementById('orderProcessingForm').addEventListener('submit', async 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                session_id: sessionId,
                 instance_url: instanceUrl,
                 custom_instance_name: customInstanceName,
                 api_version: apiVersion,

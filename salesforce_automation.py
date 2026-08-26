@@ -684,6 +684,20 @@ class SalesforceAutomation:
             self.log("OARA updated", 'success')
             return True
         else:
+            error_text = response.text or ""
+            if "No such column 'TNV_AcceptedBy__c'" in error_text:
+                # Retry without unsupported field so the remaining OARA fields are still updated.
+                fallback_payload = {
+                    "TNV_Quote_Validation_Status__c": "Bypass Validation",
+                    "TNV_Sale_Opps_Reviewed_and_Approved__c": True,
+                }
+                fallback_response = requests.patch(url, headers=self.headers, json=fallback_payload)
+                if fallback_response.status_code == 204:
+                    self.log("OARA updated (skipped TNV_AcceptedBy__c)", 'success')
+                    return True
+                self.log(f"Failed to update OARA after skipping TNV_AcceptedBy__c : {fallback_response.text}", 'error')
+                return False
+
             self.log(f"Failed to update OARA : {response.text}", 'error')
             return False
     

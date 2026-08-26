@@ -1,10 +1,21 @@
 # test_config.py
 
-# Session & Environment
 from datetime import datetime, timedelta
+import os
+from sf_auth import get_access_token as _get_token
+from credentials import ENVIRONMENTS
 
-SESSION_ID = ''  # Set dynamically or use environment variable
-INSTANCE_URL = 'https://trimbledx--dxuat.sandbox.my.salesforce.com'
+# For CLI (NewSale.py): set SF_ENV env var or edit here. Web UI uses the instance dropdown.
+ACTIVE_ENV = os.environ.get('SF_ENV', 'dxuat')
+
+# Only authenticate if credentials are configured for the active env
+_env = ENVIRONMENTS[ACTIVE_ENV]
+if _env['client_id'] and _env['client_secret'] and _env.get('username') and _env.get('password'):
+    SESSION_ID, INSTANCE_URL = _get_token(ACTIVE_ENV)
+else:
+    SESSION_ID = ''
+    INSTANCE_URL = _env['instance_url']
+
 API_VERSION = 'v58.0'
 
 IS_ACCOUNT_CREATION_NEEDED = False  

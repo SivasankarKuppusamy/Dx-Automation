@@ -9,16 +9,8 @@ from datetime import datetime
 import os
 import csv
 
-# Validate session before proceeding
-if not SESSION_ID:
-    print("❌ No valid session ID found. Please check your credentials.json file and ensure:")
-    print("   1. Correct Salesforce username and password")
-    print("   2. Instance URL is correct")
-    print("   3. Chrome browser can access Salesforce")
-    exit(1)
-
-print(f"✅ Using session for instance: {INSTANCE_URL}")
-print(f"✅ Session ID starts with: {SESSION_ID[:20]}...")
+print(f"✅ Authenticated to: {INSTANCE_URL}")
+print(f"✅ Access token starts with: {SESSION_ID[:20]}...")
 def generate_unique_name(prefix):
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     rand_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
