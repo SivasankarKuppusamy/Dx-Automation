@@ -340,7 +340,7 @@ class SalesforceAutomation:
         """Create quote"""
         self.log("Creating Quote...")
         quote_config = self.config.get('QUOTE_CONFIG', {})
-        quote_start_date = self.config.get('QUOTE_START_DATE', datetime.today() - timedelta(days=1))
+        quote_start_date = self.config.get('QUOTE_START_DATE', datetime.today())
         
         payload = {
             "SBQQ__StartDate__c": quote_start_date.strftime('%Y-%m-%d'),

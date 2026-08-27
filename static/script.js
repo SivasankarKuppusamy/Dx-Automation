@@ -2,11 +2,10 @@
 
 let currentExecutionId = null;
 
-// Set default quote start date to yesterday
+// Set default quote start date to today
 document.addEventListener('DOMContentLoaded', function() {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const dateStr = yesterday.toISOString().split('T')[0];
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
     document.getElementById('quote_start_date').value = dateStr;
 });
 
