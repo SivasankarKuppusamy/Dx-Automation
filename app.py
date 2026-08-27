@@ -44,8 +44,12 @@ def expand_instance_url(instance_input, custom_instance_name=None):
         'tdwarriors': 'https://trimbledx--tdwarriors.sandbox.my.salesforce.com',
         'tecd': 'https://trimbledx--tecd.sandbox.my.salesforce.com',
         'tecq': 'https://trimbledx--tecq.sandbox.my.salesforce.com',
-        'tecs': 'https://trimbledx--tecs.sandbox.my.salesforce.com',
+        'tecsf': 'https://trimbledx--tecsf.sandbox.my.salesforce.com',
         'tecu': 'https://trimbledx--tecu.sandbox.my.salesforce.com',
+        'fedev1': 'https://trimbledx--fedev1.sandbox.my.salesforce.com',
+        'feqa1': 'https://trimbledx--feqa1.sandbox.my.salesforce.com',
+        'fesit1': 'https://trimbledx--fesit1.sandbox.my.salesforce.com',
+        'feuat': 'https://trimbledx--feuat.sandbox.my.salesforce.com',
         'dxuat': 'https://trimbledx--dxuat.sandbox.my.salesforce.com',
         'prod': 'https://trimbledx.my.salesforce.com',
     }
